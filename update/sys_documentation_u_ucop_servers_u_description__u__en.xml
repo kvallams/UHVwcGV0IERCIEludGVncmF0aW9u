@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update>
+    <sys_documentation element="u_description__u_" label="Description (U)" language="en" table="u_ucop_servers">
+        <sys_documentation action="INSERT_OR_UPDATE">
+            <element>u_description__u_</element>
+            <help/>
+            <hint/>
+            <label>Description (U)</label>
+            <language>en</language>
+            <name>u_ucop_servers</name>
+            <plural>Description (U)</plural>
+            <sys_class_name>sys_documentation</sys_class_name>
+            <sys_created_by>kvallams</sys_created_by>
+            <sys_created_on>2018-01-29 20:17:37</sys_created_on>
+            <sys_customer_update>true</sys_customer_update>
+            <sys_id>376c2c181348db008e7253722244b03e</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_name>Description (U)</sys_name>
+            <sys_package display_value="PuppetDB" source="x_uoco5_puppetdb">7126d02e1327c7408e7253722244b0aa</sys_package>
+            <sys_policy/>
+            <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+            <sys_scope display_value="PuppetDB">7126d02e1327c7408e7253722244b0aa</sys_scope>
+            <sys_update_name>sys_documentation_u_ucop_servers_u_description__u__en</sys_update_name>
+            <sys_updated_by>kvallams</sys_updated_by>
+            <sys_updated_on>2018-01-29 20:17:37</sys_updated_on>
+            <url/>
+            <url_target/>
+        </sys_documentation>
+    </sys_documentation>
+</record_update>

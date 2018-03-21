@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_rest_message_fn">
+    <sys_rest_message_fn action="INSERT_OR_UPDATE">
+        <authentication_type>inherit_from_parent</authentication_type>
+        <basic_auth_password/>
+        <basic_auth_profile/>
+        <basic_auth_user/>
+        <content/>
+        <function_name>Get Facts</function_name>
+        <http_method>get</http_method>
+        <lock>false</lock>
+        <oauth2_profile/>
+        <protocol_name/>
+        <qualified_name>PuppetDB API [ Get Facts ]</qualified_name>
+        <rest_endpoint>http://puppetdb.ucop.edu:8080/v3/facts</rest_endpoint>
+        <rest_message display_value="PuppetDB API">f856dc2e1327c7408e7253722244b076</rest_message>
+        <sys_class_name>sys_rest_message_fn</sys_class_name>
+        <sys_created_by>kvallams</sys_created_by>
+        <sys_created_on>2018-01-11 21:56:31</sys_created_on>
+        <sys_customer_update>true</sys_customer_update>
+        <sys_id>5976142e1327c7408e7253722244b0cd</sys_id>
+        <sys_mod_count>19</sys_mod_count>
+        <sys_name>Get Facts</sys_name>
+        <sys_package display_value="PuppetDB" source="x_uoco5_puppetdb">7126d02e1327c7408e7253722244b0aa</sys_package>
+        <sys_policy/>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="PuppetDB">7126d02e1327c7408e7253722244b0aa</sys_scope>
+        <sys_update_name>sys_rest_message_fn_5976142e1327c7408e7253722244b0cd</sys_update_name>
+        <sys_updated_by>kvallams</sys_updated_by>
+        <sys_updated_on>2018-01-16 20:03:35</sys_updated_on>
+        <use_basic_auth>false</use_basic_auth>
+        <use_mid_server display_value="puppet_db_mid">4af1ede4138f83008e7253722244b02c</use_mid_server>
+        <use_mutual_auth>false</use_mutual_auth>
+    </sys_rest_message_fn>
+</record_update>
