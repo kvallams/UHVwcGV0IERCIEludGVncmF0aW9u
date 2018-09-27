@@ -9,7 +9,11 @@
         <name>PuppetDBIntegrationHelperUtil</name>
         <script><![CDATA[var PuppetDBIntegrationHelperUtil = Class.create();
 PuppetDBIntegrationHelperUtil.prototype = {
+	json:'',
+	arrayUtil:'',
+	logger:['PuppetDBIntegrationHelperUtil::'],
 	initialize: function() {
+		
 		this.json = (function(){
 			return new global.JSON();
 		})();
@@ -24,18 +28,30 @@ PuppetDBIntegrationHelperUtil.prototype = {
 		['=','name','cmdb_att_cpu_speed'],
 		['=','name','cmdb_att_cpu_type'],
 		['=','name','cmdb_att_ip_address'],
-		['=','name','cmdb_ci_spkg_apache'],
-		['=','name','cmdb_att_ram']
+		['=','name','cmdb_ci_spkg_apache'],['=','name','cmdb_ci_spkg_java'],
+		['=','name','cmdb_ci_spkg_jboss'],['=','name','cmdb_ci_spkg_php'],
+		['=','name','cmdb_ci_spkg_tomcat'],['=','name','cmdb_ci_spkg_websphere'],
+		['=','name','cmdb_att_ram'],
+		['=','name','cmdb_att_cpu_core_count'],
+		['=','name','cmdb_att_cpu_count'],
+		['=','name','cmdb_att_disk_space'],
+		['=','name','cmdb_att_dns_domain'],
+		['=','name','cmdb_att_os'],
+		['=','name','cmdb_att_os_domain'],
+		['=','name','cmdb_att_os_version']
 		];
 		var puppetResultObj = this.json.decode(this.getPuppetFacts(query));
 		var cmdbCIObj=[];
 		var cmdbCISPKG=[];
+		var missedCI=[];
+		var duplicateCI=[];
 		var cmdb_ci_spkg={};
 			var old_ci='';
 			var ciObj={};
+				gs.info(this.logger.join());
 				for(var i=0;i<puppetResultObj.length;i++){
 					var puppetResultObjName = puppetResultObj[i].name.toString();
-					if(puppetResultObjName.indexOf('cmdb_att') >= 0){
+					if(puppetResultObjName.indexOf('cmdb_att') >= 0){ //check if it is a cmdb attribute
 						if(ciObj.name == puppetResultObj[i].certname){
 							ciObj[puppetResultObjName.slice(9,puppetResultObjName.length)] = puppetResultObj[i].value;
 						}
@@ -69,47 +85,62 @@ PuppetDBIntegrationHelperUtil.prototype = {
 						if(cmdb_ci_spkg.name){
 							cmdbCISPKG.push(cmdb_ci_spkg);
 						}
-						gs.debug('PuppetDBIntegrationHelperUtil::syncCMDBFromPuppet::cmdbCIObj::'+this.json.encode(cmdbCIObj));
-						gs.debug('PuppetDBIntegrationHelperUtil::syncCMDBFromPuppet::cmdbCISPKG::'+this.json.encode(cmdbCISPKG));
+						this.logger.push('\n syncCMDBFromPuppet::cmdbCIObj::'+this.json.encode(cmdbCIObj));
+						this.logger.push('\n syncCMDBFromPuppet::cmdbCISPKG::'+this.json.encode(cmdbCISPKG));
 						//check if the CI already exists.
 						for(var j=0;j<cmdbCIObj.length;j++){
 							var ci = this.checkIfCIExist('name='+cmdbCIObj[j].name,'cmdb_ci');
 							if(ci != 'duplicate_found'){
 								if(ci != 'not_found'){//update the existing ci
-									//this.updateCIRecord(ci,cmdbCIObj[j]);
+									this.updateCIRecord(ci,cmdbCIObj[j]);
 								}
 								else{
 									//create new CI
+									//since we do not allow creation new adhoc ci's generate an incident and assign it to conifguration management team
+									missedCI.push(cmdbCIObj[j]);
+									
 								}
 							}
 							else{
-								gs.info('PuppetDBIntegrationHelperUtil::syncCMDBFromPuppet::Duplicate CI Found::'+cmdbCIObj[j].name);
+								//create incident to resolve duplicate CI issue
+								duplicateCI.push(cmdbCIObj[j]);
+								
 							}
+						}
+						if(missedCI.length>0){
+							//creat_e incident to resolve missing CI issue
+							var inc_rec = this.createIncident(missedCI,'CMDB:Missing CI');
+							this.logger.push('\n syncCMDBFromPuppet::Incident Created::'+inc_rec.number);
+						}
+						if(duplicateCI.length>0){
+							var inc = this.createIncident(cmdbCIObj[j].name+'','CMDB:Duplicate CI');
+							this.logger.push('\n syncCMDBFromPuppet::Duplicate CI Found::'+cmdbCIObj[j].name+'::Incident Created::'+inc.number);
 						}
 						//check if softwrae package exist
 						for(var k =0;k<cmdbCISPKG.length;k++){
 							var cmdb_ci_gr = this.checkIfCIExist('name='+cmdbCISPKG[k].name,'cmdb_ci');
 							for(var key in cmdbCISPKG[k]){
 								if(key!='name'){ //do not look for host names in the software package table
-								var spkg_query = 'name='+key+'^version='+cmdbCISPKG[k][key];
-								var spkg = this.checkIfCIExist(spkg_query,'cmdb_ci_spkg');
-								if(spkg != 'duplicate_found'){
-									if(spkg == 'not_found'){//check if software package already exists on this ci 
-										 spkg = this.createNewSPKG(key,cmdbCISPKG[k][key]);
+									var spkg_query = 'name='+key+'^version='+cmdbCISPKG[k][key];
+									var spkg = this.checkIfCIExist(spkg_query,'cmdb_ci_spkg');
+									if(spkg != 'duplicate_found'){
+										if(spkg == 'not_found'){//check if software package already exists on this ci
+											spkg = this.createNewSPKG(key,cmdbCISPKG[k][key]);
+										}
+										if(cmdb_ci_gr != 'duplicate_found' && cmdb_ci_gr !='not_found'){ //skip update of the software instace if there are duplicate installed on.
+											this.updateInstalledOn(spkg.sys_id,cmdb_ci_gr.sys_id);
+										}
 									}
-									if(cmdb_ci_gr != 'duplicate_found' && cmdb_ci_gr !='not_found'){ //skip update of the software instace if there are duplicate installed on.
-										this.updateInstalledOn(spkg.sys_id,cmdb_ci_gr.sys_id);
+									else{
+										
+										this.logger.push('\n syncCMDBFromPuppet::Duplicate SoftwarePackage found skipping update::'+'name='+key+'^version='+cmdbCISPKG[k][key]);
 									}
 								}
-								else{
-									gs.info('PuppetDBIntegrationHelperUtil::syncCMDBFromPuppet::Duplicate SoftwarePackage found skipping update::'+'name='+key+'^version='+cmdbCISPKG[k][key]);
-								}
-							}
 							}
 							
 							
 						}
-						
+						gs.info(this.logger.join());
 						
 					},
 					//Create spkg relation by populating cmdb_software_instance
@@ -148,7 +179,7 @@ PuppetDBIntegrationHelperUtil.prototype = {
 						}
 						ci_gr.u_additional_comments = new GlideDateTime() +'::'+  this.json.encode(cmdbCIObj);
 						ci_gr.update();
-						gs.debug('PuppetDBIntegrationHelperUtil::syncCMDBFromPuppet::Updated cmdbCI::'+cmdb_gr.name);
+						this.logger.push('\n PuppetDBIntegrationHelperUtil::syncCMDBFromPuppet::Updated cmdbCI::'+cmdb_gr.name);
 					},
 					//check if the CI already exists return CI gr if exists else return 'not_found'
 					checkIfCIExist: function(query,table){
@@ -156,7 +187,7 @@ PuppetDBIntegrationHelperUtil.prototype = {
 						cmdb_gr.addEncodedQuery(query);
 						cmdb_gr.query();
 						if(cmdb_gr.getRowCount() > 1){
-							gs.error("PuppetDBIntegrationHelperUtil::syncCMDBFromPuppet::Error::Duplicate CI's found, Update of CI "+ci_name+" has been ignored!");
+							this.logger.push("\n syncCMDBFromPuppet::Error::Duplicate CI's found, Update of CI "+ci_name+" has been ignored!");
 							return 'duplicate_found';
 						}
 						else if(cmdb_gr.getRowCount() == 1){
@@ -177,11 +208,34 @@ PuppetDBIntegrationHelperUtil.prototype = {
 								var response = r.execute();
 								var responseBody = response.getBody();
 								var httpStatus = response.getStatusCode();
-								gs.debug('PuppetDBIntegrationHelperUtil::getPuppetFacts::httpStatus::'+httpStatus);
+								this.logger.push('\n getPuppetFacts::httpStatus::'+httpStatus);
 								return responseBody;
 							}
 							catch(ex) {
-								gs.error('PuppetDBIntegrationHelperUtil::getPuppetFacts::'+ex);
+								this.logger.push('\n getPuppetFacts::error'+ex);
+							}
+						},
+						createIncident: function(ci,short_desc){ // arg: ci name
+							//create incident for duplicate CI and assign it to SACM group
+							var incGr = new GlideRecord('incident');
+							var	query = 'active=true^short_descriptionSTARTSWITH'+short_desc;
+							incGr.addEncodedQuery(query);
+							incGr.query();
+							if(incGr.next()){
+								incGr.setValue('comments','CMDB Sync from puppet DB has found below \n'+short_desc+' please take necessary action for the automation to update the CI \n'+this.json.encode(ci));
+								incGr.update();
+								return incGr;
+							}
+							else{
+								incGr.setValue('short_description',short_desc);
+								incGr.caller_id = '2fe3044bed3f6500bba285cd584c2ae2';
+								incGr.setValue('opened_by','2fe3044bed3f6500bba285cd584c2ae2');
+								incGr.setValue('description','CMDB Sync from puppet DB has found below \n'+short_desc+' please take necessary action for the automation to update the CI \n'+this.json.encode(ci));
+								incGr.setValue('assignment_group','cc6d57d30f1782003a8591dbe1050e7f');
+								//incGr.setDisplayValue('cmdb_ci',ci);
+								incGr.setValue('contact_type','email');
+								incGr.insert();
+								return incGr;
 							}
 						},
 						_printObj:function(obj){
@@ -189,7 +243,7 @@ PuppetDBIntegrationHelperUtil.prototype = {
 							for(var key in obj){
 								result=result+','+key+'::'+obj[key];
 							}
-							gs.debug('PuppetDBIntegrationHelperUtil::getPuppetFacts::PrintObj::'+result);
+							this.logger.push('\n getPuppetFacts::PrintObj::'+result);
 						},
 						type: 'PuppetDBIntegrationHelperUtil'
 						
@@ -200,7 +254,7 @@ PuppetDBIntegrationHelperUtil.prototype = {
         <sys_created_on>2018-01-16 20:10:20</sys_created_on>
         <sys_customer_update>true</sys_customer_update>
         <sys_id>910ea14813ff83008e7253722244b0c3</sys_id>
-        <sys_mod_count>41</sys_mod_count>
+        <sys_mod_count>63</sys_mod_count>
         <sys_name>PuppetDBIntegrationHelperUtil</sys_name>
         <sys_package display_value="PuppetDB" source="x_uoco5_puppetdb">7126d02e1327c7408e7253722244b0aa</sys_package>
         <sys_policy>read</sys_policy>
@@ -208,6 +262,6 @@ PuppetDBIntegrationHelperUtil.prototype = {
         <sys_scope display_value="PuppetDB">7126d02e1327c7408e7253722244b0aa</sys_scope>
         <sys_update_name>sys_script_include_910ea14813ff83008e7253722244b0c3</sys_update_name>
         <sys_updated_by>kvallams</sys_updated_by>
-        <sys_updated_on>2018-01-24 07:37:33</sys_updated_on>
+        <sys_updated_on>2018-08-30 22:09:31</sys_updated_on>
     </sys_script_include>
 </record_update>

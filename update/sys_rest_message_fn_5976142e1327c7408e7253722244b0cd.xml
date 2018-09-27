@@ -29,7 +29,7 @@
         <sys_updated_by>kvallams</sys_updated_by>
         <sys_updated_on>2018-01-16 20:03:35</sys_updated_on>
         <use_basic_auth>false</use_basic_auth>
-        <use_mid_server display_value="puppet_db_mid">4af1ede4138f83008e7253722244b02c</use_mid_server>
+        <use_mid_server display_value="servicenow_test_mid">4af1ede4138f83008e7253722244b02c</use_mid_server>
         <use_mutual_auth>false</use_mutual_auth>
     </sys_rest_message_fn>
 </record_update>
